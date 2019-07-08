@@ -5,6 +5,7 @@ import path from 'path';
 import readdir from 'recursive-readdir';
 import meow from 'meow';
 import Listr from 'listr';
+import chalk from 'chalk';
 
 function acceptOnlyJSON(file: string, stats: fs.Stats) {
   return path.basename(file) === 'node_modules' || path.basename(file) === '.git' || path.basename(file) === 'dist' || path.basename(file) === 'build';
@@ -48,7 +49,7 @@ const cli = meow(`
 );
 
 if (cli.input.length === 0) {
-  console.error('Specify a folder path');
+  console.error(chalk.white.bgRed.bold('Error:'), 'Specify a folder path');
   process.exit(1);
 }
 
@@ -81,7 +82,12 @@ function run(args: meow.Result) {
     }
   ]);
   tasks.run().then(({ packages, time }: { packages: string[], time: ITime }) => {
-    console.log(packages, time);
+    console.log(`
+    ${chalk.bold('Number of files found')}: ${chalk.green('' + packages.length)}
+    ${chalk.bold('Time')}: ${chalk.green(time.s + 's')}, ${chalk.green(time.ms + 'ms')}
+    `);
+  }).catch((error: Error) => {
+    console.error(chalk.white.bgRed('Error:'), error.message);
   });
 }
 
