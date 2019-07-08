@@ -1,33 +1,22 @@
-import klaw from 'klaw';
-import through2 from 'through2';
-import  path from 'path';
+import * as fs from "fs";
+import path from 'path';
+import readdir from 'recursive-readdir';
 
-const excludeModulesDirs = through2.obj(function (item: klaw.Item, enc: string, next: through2.TransformCallback) {
-  const dirName: string = path.dirname(item.path);
-  if (!dirName.includes('node_modules')) {
-    this.push(item);
-  }
-  next();
-});
+function acceptOnlyJSON(file: string, stats: fs.Stats) {
+  return path.basename(file) === 'node_modules' || path.basename(file) === '.git';
+}
+const walk = async (path: string): Promise<string[]> => {
+  return await readdir(path, [acceptOnlyJSON]);
+}
 
-const extractPackageJSON = through2.obj(function (item: klaw.Item, _, next: through2.TransformCallback) {
-  const fileName: string = path.basename(item.path);
-  if (fileName === 'package.json') {
-    this.push(item);
-  }
-  next();
-});
-
-const items: klaw.Item[] = [];
-klaw('../', {depthLimit: 2})
-.pipe(excludeModulesDirs)
-.pipe(extractPackageJSON)
-.on('data', (item: klaw.Item) => {
-  console.log(item.path);
-  items.push(item)
-})
-.on('end', () => console.log(items.length));
-
-
-
-
+try {
+  (async () => {
+    const hrstart: [number, number] = process.hrtime()
+    const files = await walk('../');
+    console.log(files.filter((fileName:string) => path.basename(fileName) === 'package.json'));
+    const hrend: [number, number] = process.hrtime(hrstart);
+    console.info('Execution time (hr): %ds %dms', hrend[0], hrend[1] / 1000000);
+  })();
+} catch (error) {
+  console.log('Error: ', error);
+}
