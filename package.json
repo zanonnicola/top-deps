@@ -1,11 +1,21 @@
 {
   "name": "top-deps",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Find out the most common used packages in a given directory",
+  "main": "dist/main.js",
+  "bin": {
+    "top-deps": "dist/main.js"
+  },
   "engines": {
     "node": ">= 10.13 <11"
   },
+  "keywords": [
+    "cli",
+    "typescript"
+  ],
   "devDependencies": {
+    "@types/listr": "^0.14.0",
+    "@types/meow": "^5.0.0",
     "@types/node": "^10.14.10",
     "@types/recursive-readdir": "^2.2.0",
     "prettier": "~1.18.2",
@@ -17,11 +27,14 @@
   },
   "scripts": {
     "start": "ts-node-dev --respawn ./src/main.ts",
-    "prod": "tsc && node dist/main.js"
+    "prod": "tsc"
   },
   "author": "Nicola Zanon <nicola.zanon86@gmail.com>",
   "license": "Apache-2.0",
   "dependencies": {
+    "chalk": "^2.4.2",
+    "listr": "^0.14.3",
+    "meow": "^5.0.0",
     "recursive-readdir": "^2.2.2"
   }
 }
