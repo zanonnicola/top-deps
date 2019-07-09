@@ -39,7 +39,11 @@ const countDeps = async (
   const results = new Map();
   for (const file of packages) {
     const obj = extractDeps(await file);
-    console.log(Object.values(obj));
+    console.log(
+      Object.values(obj).reduce((prev, curr) => {
+        return { ...prev, ...curr };
+      }),
+    );
   }
   return results;
 };
