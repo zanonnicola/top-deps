@@ -15,11 +15,15 @@
   ],
   "devDependencies": {
     "@types/chalk": "^2.2.0",
+    "@types/jest": "24.0.15",
     "@types/listr": "^0.14.0",
     "@types/meow": "^5.0.0",
     "@types/node": "^10.14.10",
     "@types/recursive-readdir": "^2.2.0",
+    "execa": "2.0.3",
+    "jest": "24.8.0",
     "prettier": "~1.18.2",
+    "ts-jest": "24.0.2",
     "ts-node-dev": "^1.0.0-pre.40",
     "tslint": "~5.18.0",
     "tslint-config-prettier": "^1.18.0",
@@ -28,7 +32,10 @@
   },
   "scripts": {
     "start": "ts-node-dev --respawn ./src/a.ts",
-    "prod": "tsc"
+    "prod": "tsc",
+    "lint": "tslint -t stylish --project \"tsconfig.json\"",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch"
   },
   "author": "Nicola Zanon <nicola.zanon86@gmail.com>",
   "license": "Apache-2.0",

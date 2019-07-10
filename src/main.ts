@@ -17,8 +17,9 @@ interface IDependencies {
 interface IContext {
   packages: string[];
   hrstart: [number, number];
-  orderedPackages: Map<string, number>
+  orderedPackages: Map<string, number>;
   time: ITime;
+  error?: boolean;
 }
 
 interface ITime {
@@ -43,17 +44,12 @@ const readFile = promisify(fs.readFile);
 const readPackage = async (filePath: string): Promise<string> => {
   return await readFile(filePath, 'utf-8');
 };
-const extractDeps = (
-  packageJson: string,
-): IDependencies => {
+const extractDeps = (packageJson: string): IDependencies => {
   const { dependencies, devDependencies } = JSON.parse(packageJson);
-  if (dependencies && devDependencies) {
-    return {
-      dependencies,
-      devDependencies,
-    };
-  }
-  return {};
+  return {
+    dependencies: dependencies !== undefined ? dependencies : {},
+    devDependencies: devDependencies !== undefined ? devDependencies : {},
+  };
 };
 
 const countDeps = async (
@@ -63,24 +59,34 @@ const countDeps = async (
   for (const file of packages) {
     const obj = extractDeps(await file);
     // Merging deps and devDeps in 1 object
-    const mergedDepsObj: { [key: string]: string } = Object.values(obj).reduce((prev: Partial<IDependencies>, curr: Partial<IDependencies>) => {
-      return { ...prev, ...curr };
-    }, {});
+    const mergedDepsObj: { [key: string]: string } = Object.values(obj).reduce(
+      (prev: Partial<IDependencies>, curr: Partial<IDependencies>) => {
+        return { ...prev, ...curr };
+      },
+      {},
+    );
     Object.keys(mergedDepsObj).forEach((key: string) => {
-      // @ts-ignore
-      results.has(key) ? results.set(key, results.get(key) + 1) : results.set(key, 0);
-    })
-  };
+      results.has(key)
+        ? results.set(key, results.get(key)! + 1)
+        : results.set(key, 1);
+    });
+  }
   return results;
 };
 
 // Sort Map in ASC order by its values
 const orderDepsASC = (map: Map<string, number>): Map<string, number> => {
-  return new Map([...map].sort((a: [string, number], b: [string, number]) => a[1] === b[1] ? 0 : a[1] > b[1] ? -1 : 1));
-}
+  return new Map(
+    [...map].sort((a: [string, number], b: [string, number]) =>
+      a[1] === b[1] ? 0 : a[1] > b[1] ? -1 : 1,
+    ),
+  );
+};
 
 const printTable = (map: Map<string, number>, limit: number = 3): void => {
-  const table = new Table({ head: ["", chalk.green.bold("Package Name"), chalk.green.bold("Count")] }) as CrossTable;
+  const table = new Table({
+    head: ['', chalk.green.bold('Package Name'), chalk.green.bold('Count')],
+  }) as CrossTable;
   let times = 1;
   for (var [key, value] of map) {
     if (times > limit) break;
@@ -92,7 +98,7 @@ const printTable = (map: Map<string, number>, limit: number = 3): void => {
     times++;
   }
   console.log(table.toString());
-}
+};
 
 const cli = meow(
   `
@@ -134,11 +140,10 @@ if (cli.input.length === 0) {
 }
 
 function run(args: meow.Result) {
-  console.log(args.input, args.flags);
   const tasks: Listr = new Listr([
     {
       title: 'Scanning current folder',
-      task: async (ctx: IContext) => {
+      task: async (ctx: IContext, task) => {
         try {
           const hrstart: [number, number] = process.hrtime();
           const files = await walk(args.input[0]);
@@ -147,15 +152,19 @@ function run(args: meow.Result) {
           );
           ctx.hrstart = hrstart;
         } catch (error) {
-          throw new Error(error);
+          ctx.error = true;
+          task.skip('No such file or directory');
         }
       },
     },
     {
       title: 'Counting',
+      skip: (ctx: IContext) => ctx.error && 'Can not process current input',
       task: async (ctx: IContext) => {
         const packages = ctx.packages
-          .filter((fileName: string) => path.basename(fileName) === 'package.json')
+          .filter(
+            (fileName: string) => path.basename(fileName) === 'package.json',
+          )
           .map(readPackage);
         ctx.orderedPackages = orderDepsASC(await countDeps(packages));
         const hrend: [number, number] = process.hrtime(ctx.hrstart);
@@ -169,18 +178,31 @@ function run(args: meow.Result) {
   ]);
   tasks
     .run()
-    .then(({ orderedPackages, time }: { orderedPackages: Map<string, number>; time: ITime }) => {
-      console.log('\n');
-      printTable(orderedPackages);
-      console.log(`
-    ${chalk.bold('Number of files found')}: ${chalk.green('' + orderedPackages.size)}
+    .then(
+      ({
+        orderedPackages,
+        time,
+      }: {
+        orderedPackages: Map<string, number>;
+        time: ITime;
+      }) => {
+        console.log('\n');
+        printTable(orderedPackages);
+        console.log(`
+    ${chalk.bold('Number of files found')}: ${chalk.green(
+          '' + orderedPackages.size,
+        )}
     ${chalk.bold('Time')}: ${chalk.green(time.s + 's')}, ${chalk.green(
-        time.ms + 'ms',
-      )}
+          time.ms + 'ms',
+        )}
     `);
-    })
+      },
+    )
     .catch((error: Error) => {
-      console.error(chalk.white.bgRed('Error:'), error.message);
+      console.error(
+        chalk.white.bgRed('Error:'),
+        `Please check if ${chalk.red(args.input[0])} it's a valid directory`,
+      );
     });
 }
 
