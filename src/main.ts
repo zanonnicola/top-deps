@@ -106,7 +106,7 @@ const cli = meow(
     $ top-deps <folder path>
 
     Options
-      --limit, -l  limit number of rows displayed (default 5)
+      --limit, -l  limit number of rows displayed (default 3)
 
       Other options:
       -h, --help         show usage information
@@ -187,7 +187,7 @@ function run(args: meow.Result) {
         time: ITime;
       }) => {
         console.log('\n');
-        printTable(orderedPackages);
+        printTable(orderedPackages, Number(args.flags.limit));
         console.log(`
     ${chalk.bold('Number of files found')}: ${chalk.green(
           '' + orderedPackages.size,

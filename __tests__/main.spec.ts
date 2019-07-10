@@ -10,12 +10,20 @@ describe('top-deps CLI', () => {
   });
   it('should count correctly all the unique dependencies listed in package.json', async () => {
     const { stdout } = await execa('./dist/main.js', ['./fixtures']);
-    expect(/\btypescript\b/.test(stdout)).toBeTruthy;
-    expect(/\bchalk\b/.test(stdout)).toBeTruthy;
-    expect(/\bexeca\b/.test(stdout)).toBeTruthy;
+    expect(/\btypescript\b/.test(stdout)).toBeTruthy();
+    expect(/\bchalk\b/.test(stdout)).toBeTruthy();
+    expect(/\bexeca\b/.test(stdout)).toBeTruthy();
   });
-  it('should order correctly based on popularity', async () => {
-    const { stdout } = await execa('./dist/main.js', ['./fixtures/sub_empty']);
-    expect(/\bError:\b/.test(stdout)).toBeTruthy;
+  it('--limit flag should return the correct number of results', async () => {
+    const { stdout } = await execa('./dist/main.js', [
+      './fixtures',
+      '--limit=1',
+    ]);
+    expect(/\btypescript\b/.test(stdout)).toBeTruthy();
+    expect(/\bchalk\b/.test(stdout)).toBeFalsy();
+  });
+  it("should display error message if folder doesn't exist", async () => {
+    const { stdout } = await execa('./dist/main.js', ['./wrong']);
+    expect(/\bCan not process current input\b/.test(stdout)).toBeTruthy();
   });
 });
