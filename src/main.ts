@@ -7,6 +7,7 @@ import readdir from 'recursive-readdir';
 import meow from 'meow';
 import Listr from 'listr';
 import chalk from 'chalk';
+import Table, { CrossTable } from 'cli-table3';
 
 interface IDependencies {
   dependencies?: object;
@@ -78,6 +79,21 @@ const orderDepsASC = (map: Map<string, number>): Map<string, number> => {
   return new Map([...map].sort((a: [string, number], b: [string, number]) => a[1] === b[1] ? 0 : a[1] > b[1] ? -1 : 1));
 }
 
+const printTable = (map: Map<string, number>, limit: number = 3): void => {
+  const table = new Table({ head: ["", chalk.green.bold("Package Name"), chalk.green.bold("Count")] }) as CrossTable;
+  let times = 1;
+  for (var [key, value] of map) {
+    if (times > limit) break;
+    // Adding position to the element in the table
+    const index = times + '';
+    const o: { [key: string]: string[] } = {};
+    o[index] = [key, value + ''];
+    table.push(o);
+    times++;
+  }
+  console.log(table.toString());
+}
+
 const cli = meow(
   `
     Usage
@@ -146,6 +162,8 @@ function run(args: meow.Result) {
   tasks
     .run()
     .then(({ orderedPackages, time }: { orderedPackages: Map<string, number>; time: ITime }) => {
+      console.log('\n');
+      printTable(orderedPackages);
       console.log(`
     ${chalk.bold('Number of files found')}: ${chalk.green('' + orderedPackages.size)}
     ${chalk.bold('Time')}: ${chalk.green(time.s + 's')}, ${chalk.green(
