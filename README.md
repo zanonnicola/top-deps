@@ -1,5 +1,4 @@
-[![TypeScript version][ts-badge]][typescript-35]
-[![Node.js version][nodejs-badge]][nodejs]
+# top-deps
 
 > Count and display the most common used packages in a given directory
 
