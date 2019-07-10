@@ -3,6 +3,11 @@ import path from 'path';
 import { promisify } from 'util';
 import readdir from 'recursive-readdir';
 
+interface IDependencies {
+  dependencies?: object;
+  devDependencies?: object;
+}
+
 function acceptOnlyJSON(file: string, stats: fs.Stats) {
   return (
     path.basename(file) === 'node_modules' ||
@@ -22,7 +27,7 @@ const readPackage = async (filePath: string): Promise<string> => {
 };
 const extractDeps = (
   packageJson: string,
-): { dependencies?: object; devDependencies?: object } => {
+): IDependencies => {
   const { dependencies, devDependencies } = JSON.parse(packageJson);
   if (dependencies && devDependencies) {
     return {
@@ -36,22 +41,30 @@ const extractDeps = (
 const countDeps = async (
   packages: Promise<string>[],
 ): Promise<Map<string, number>> => {
-  const results = new Map();
+  const results: Map<string, number> = new Map();
   for (const file of packages) {
     const obj = extractDeps(await file);
-    console.log(
-      Object.values(obj).reduce((prev, curr) => {
-        return { ...prev, ...curr };
-      }),
-    );
-  }
+    // Merging deps and devDeps in 1 object
+    const mergedDepsObj: { [key: string]: string } = Object.values(obj).reduce((prev: Partial<IDependencies>, curr: Partial<IDependencies>) => {
+      return { ...prev, ...curr };
+    }, {});
+    Object.keys(mergedDepsObj).forEach((key: string) => {
+      // @ts-ignore
+      results.has(key) ? results.set(key, results.get(key) + 1) : results.set(key, 0);
+    })
+  };
   return results;
 };
+
+// Sort Map in ASC order by its values
+const orderDepsASC = (map: Map<string, number>): Map<string, number> => {
+  return new Map([...map].sort((a: [string, number], b: [string, number]) => a[1] === b[1] ? 0 : a[1] > b[1] ? -1 : 1));
+}
 
 (async () => {
   const files = await walk('./');
   const packages = files
     .filter((fileName: string) => path.basename(fileName) === 'package.json')
     .map(readPackage);
-  await countDeps(packages);
+  console.log(orderDepsASC(await countDeps(packages)));
 })();

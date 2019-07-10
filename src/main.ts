@@ -2,10 +2,28 @@
 
 import * as fs from 'fs';
 import path from 'path';
+import { promisify } from 'util';
 import readdir from 'recursive-readdir';
 import meow from 'meow';
 import Listr from 'listr';
 import chalk from 'chalk';
+
+interface IDependencies {
+  dependencies?: object;
+  devDependencies?: object;
+}
+
+interface IContext {
+  packages: string[];
+  hrstart: [number, number];
+  orderedPackages: Map<string, number>
+  time: ITime;
+}
+
+interface ITime {
+  s: number;
+  ms: number;
+}
 
 function acceptOnlyJSON(file: string, stats: fs.Stats) {
   return (
@@ -19,14 +37,45 @@ const walk = async (path: string): Promise<string[]> => {
   return await readdir(path, [acceptOnlyJSON]);
 };
 
-interface IContext {
-  packages: string[];
-  hrstart: [number, number];
-  time: ITime;
-}
-interface ITime {
-  s: number;
-  ms: number;
+const readFile = promisify(fs.readFile);
+
+const readPackage = async (filePath: string): Promise<string> => {
+  return await readFile(filePath, 'utf-8');
+};
+const extractDeps = (
+  packageJson: string,
+): IDependencies => {
+  const { dependencies, devDependencies } = JSON.parse(packageJson);
+  if (dependencies && devDependencies) {
+    return {
+      dependencies,
+      devDependencies,
+    };
+  }
+  return {};
+};
+
+const countDeps = async (
+  packages: Promise<string>[],
+): Promise<Map<string, number>> => {
+  const results: Map<string, number> = new Map();
+  for (const file of packages) {
+    const obj = extractDeps(await file);
+    // Merging deps and devDeps in 1 object
+    const mergedDepsObj: { [key: string]: string } = Object.values(obj).reduce((prev: Partial<IDependencies>, curr: Partial<IDependencies>) => {
+      return { ...prev, ...curr };
+    }, {});
+    Object.keys(mergedDepsObj).forEach((key: string) => {
+      // @ts-ignore
+      results.has(key) ? results.set(key, results.get(key) + 1) : results.set(key, 0);
+    })
+  };
+  return results;
+};
+
+// Sort Map in ASC order by its values
+const orderDepsASC = (map: Map<string, number>): Map<string, number> => {
+  return new Map([...map].sort((a: [string, number], b: [string, number]) => a[1] === b[1] ? 0 : a[1] > b[1] ? -1 : 1));
 }
 
 const cli = meow(
@@ -80,7 +129,11 @@ function run(args: meow.Result) {
     },
     {
       title: 'Counting',
-      task: (ctx: IContext) => {
+      task: async (ctx: IContext) => {
+        const packages = ctx.packages
+          .filter((fileName: string) => path.basename(fileName) === 'package.json')
+          .map(readPackage);
+        ctx.orderedPackages = orderDepsASC(await countDeps(packages));
         const hrend: [number, number] = process.hrtime(ctx.hrstart);
         ctx.time = {
           s: hrend[0],
@@ -92,9 +145,9 @@ function run(args: meow.Result) {
   ]);
   tasks
     .run()
-    .then(({ packages, time }: { packages: string[]; time: ITime }) => {
+    .then(({ orderedPackages, time }: { orderedPackages: Map<string, number>; time: ITime }) => {
       console.log(`
-    ${chalk.bold('Number of files found')}: ${chalk.green('' + packages.length)}
+    ${chalk.bold('Number of files found')}: ${chalk.green('' + orderedPackages.size)}
     ${chalk.bold('Time')}: ${chalk.green(time.s + 's')}, ${chalk.green(
         time.ms + 'ms',
       )}
