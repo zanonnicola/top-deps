@@ -6,6 +6,9 @@
   "bin": {
     "top-deps": "dist/main.js"
   },
+  "files": [
+		"dist"
+	],
   "engines": {
     "node": ">= 10.13 <11"
   },
@@ -35,7 +38,8 @@
     "prod": "tsc",
     "lint": "tslint -t stylish --project \"tsconfig.json\"",
     "test": "jest --coverage",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "prepublish": "npm run prod && npm t && npm run lint"
   },
   "author": "Nicola Zanon <nicola.zanon86@gmail.com>",
   "license": "Apache-2.0",

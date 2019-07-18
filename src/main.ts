@@ -143,7 +143,7 @@ function run(args: meow.Result) {
   const tasks: Listr = new Listr([
     {
       title: 'Scanning current folder',
-      task: async (ctx: IContext, task) => {
+      task: async (ctx: IContext, task: Listr.ListrTaskWrapper) => {
         try {
           const hrstart: [number, number] = process.hrtime();
           const files = await walk(args.input[0]);
