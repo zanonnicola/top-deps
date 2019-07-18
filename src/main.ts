@@ -83,7 +83,7 @@ const orderDepsASC = (map: Map<string, number>): Map<string, number> => {
   );
 };
 
-const printTable = (map: Map<string, number>, limit: number = 3): void => {
+const printTable = (map: Map<string, number>, limit: number): void => {
   const table = new Table({
     head: ['', chalk.green.bold('Package Name'), chalk.green.bold('Count')],
   }) as CrossTable;
@@ -129,6 +129,7 @@ const cli = meow(
       limit: {
         type: 'string',
         alias: 'l',
+        default: 3
       },
     },
   },
@@ -203,6 +204,7 @@ function run(args: meow.Result) {
         chalk.white.bgRed('Error:'),
         `Please check if ${chalk.red(args.input[0])} it's a valid directory`,
       );
+      process.exit(0);
     });
 }
 

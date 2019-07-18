@@ -1,14 +1,14 @@
 {
   "name": "top-deps",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Count and display the most common used packages in a given directory",
   "main": "dist/main.js",
   "bin": {
     "top-deps": "dist/main.js"
   },
   "files": [
-		"dist"
-	],
+    "dist"
+  ],
   "engines": {
     "node": ">= 10.13 <11"
   },
